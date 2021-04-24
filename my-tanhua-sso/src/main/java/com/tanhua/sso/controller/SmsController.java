@@ -31,7 +31,7 @@ public class SmsController {
             if("000003".equals(errorResult.getErrCode())){  //发送成功
                 return ResponseEntity.ok(errorResult);
             }else if("000001".equals(errorResult.getErrCode())){    //上一次发送未失效
-                return ResponseEntity.ok(errorResult);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResult);
             }
         }catch (Exception e){
             log.error("发送短信验证码失败~ phone = " + phone,e);
