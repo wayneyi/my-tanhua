@@ -104,4 +104,8 @@ public class UserService {
         result = isNew + "|" + token;
         return result;
     }
+
+    public User queryUserByToken(String token) {
+        return null;
+    }
 }
