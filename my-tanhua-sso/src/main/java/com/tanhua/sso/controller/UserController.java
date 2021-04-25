@@ -22,8 +22,6 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-
-
     @PostMapping("loginVerification")
     public ResponseEntity<Object> login(@RequestBody Map<String,String> param){
         String data = null;

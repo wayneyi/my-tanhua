@@ -29,6 +29,12 @@ public class UserInfoService {
     @Autowired
     private PicUploadService picUploadService;
 
+    /**
+     * 完善个人基本信息
+     * @param param
+     * @param token
+     * @return
+     */
     public Boolean saveUserInfo(Map<String, String> param, String token) {
         //校验token
         User user = userService.queryUserByToken(token);

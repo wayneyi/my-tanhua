@@ -3,6 +3,7 @@ package com.tanhua.sso.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.tanhua.sso.mapper.UserMapper;
 import com.tanhua.sso.pojo.User;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.extern.slf4j.Slf4j;
@@ -66,7 +67,7 @@ public class UserService {
         //查询数据库,看用户是否已经注册
         boolean isNew = false;  //判断是否新用户
         QueryWrapper<User> query = new QueryWrapper<>();
-        query.eq("mobile", phone);  //查询条件mobile字段
+        query.eq("mobile", phone);  //根据mobile字段查询user
         User user = userMapper.selectOne(query);
 
         if (null == user) {
@@ -106,6 +107,26 @@ public class UserService {
     }
 
     public User queryUserByToken(String token) {
+        try {
+            //通过token解析数据
+            Map<String, Object> body = Jwts.parser()
+                    .setSigningKey(secret)
+                    .parseClaimsJws(token)
+                    .getBody(); //{id=2,exp=.....}
+
+            User user = new User();
+            user.setId(Long.valueOf(body.get("id").toString()));
+
+            //需要返回user对象中的mobile,需要查询数据库获取mobile数据
+            //如果每次都查询数据库,会影响性能,需要对mobile数据进行缓存
+            //数据缓存时,需要设置过期时间,过期时间要和token的一致
+
+            return user;
+        } catch (ExpiredJwtException e) {
+            log.error("Token已过期 token=" + token, e);
+        } catch (Exception e) {
+            log.error("Token不合法 token=" + token, e);
+        }
         return null;
     }
 }
