@@ -32,4 +32,47 @@ public interface QuanZiApi {
      * @return
      */
     PageInfo<Publish> queryRecommendPublishList(Long userId, Integer page, Integer pageSize);
+
+    /**
+     * 根据id查询动态
+     *
+     * @param id 动态id
+     * @return
+     */
+    Publish queryPublishById(String id);
+
+    /**
+     * 点赞
+     *
+     * @param userId
+     * @param publishId
+     * @return
+     */
+    Boolean likeComment(Long userId, String publishId);
+
+    /**
+     * 取消点赞
+     *
+     * @param userId
+     * @param publishId
+     * @return
+     */
+    Boolean disLikeComment(Long userId, String publishId);
+
+    /**
+     * 查询点赞数
+     *
+     * @param publishId
+     * @return
+     */
+    Long queryLikeCount(String publishId);
+
+    /**
+     * 查询用户是否点赞该动态
+     *
+     * @param userId
+     * @param publishId
+     * @return
+     */
+    Boolean queryUserIsLike(Long userId, String publishId);
 }
