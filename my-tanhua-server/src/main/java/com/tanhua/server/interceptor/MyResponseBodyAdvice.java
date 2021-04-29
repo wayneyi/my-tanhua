@@ -1,7 +1,7 @@
 package com.tanhua.server.interceptor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tanhua.server.utils.Cache;
+import com.tanhua.common.utils.Cache;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.MethodParameter;

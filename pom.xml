@@ -8,6 +8,7 @@
         <module>my-tanhua-sso</module>
         <module>my-tanhua-server</module>
         <module>my-tanhua-dubbo</module>
+        <module>my-tanhua-common</module>
     </modules>
 
     <parent>
@@ -172,6 +173,11 @@
                 <groupId>io.jsonwebtoken</groupId>
                 <artifactId>jjwt</artifactId>
                 <version>0.9.1</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-all</artifactId>
+                <version>5.5.2</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

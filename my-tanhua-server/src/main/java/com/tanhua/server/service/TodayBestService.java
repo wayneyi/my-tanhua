@@ -1,17 +1,17 @@
 package com.tanhua.server.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.tanhua.common.pojo.User;
+import com.tanhua.common.pojo.UserInfo;
+import com.tanhua.common.utils.UserThreadLocal;
 import com.tanhua.dubbo.server.pojo.RecommendUser;
 import com.tanhua.dubbo.server.vo.PageInfo;
-import com.tanhua.server.pojo.User;
-import com.tanhua.server.pojo.UserInfo;
 import com.tanhua.server.vo.PageResult;
 import com.tanhua.server.vo.RecommendUserQueryParam;
 import com.tanhua.server.vo.TodayBest;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
@@ -31,13 +31,10 @@ public class TodayBestService {
     @Value("${tanhua.sso.default.user}")
     private Long defaultUser;
 
-    public TodayBest queryTodayBest(String token) {
-        //校验token是否有效,通过sso接口进行校验
-        User user = userService.queryUserByToken(token);
-        if (null == user) {
-            //token非法或已过期
-            return null;
-        }
+    public TodayBest queryTodayBest() {
+        //无需校验,直接获取
+        User user = UserThreadLocal.get();
+
         //查询推荐用户(今日佳人)
         TodayBest todayBest = recommendUserService.queryTodayBest(user.getId());
         if (null == todayBest) {
@@ -61,13 +58,14 @@ public class TodayBestService {
         return todayBest;
     }
 
-    public PageResult queryRecommendation(String token, RecommendUserQueryParam queryParam) {
-        //校验token是否有效,通过sso接口进行校验
-        User user = userService.queryUserByToken(token);
-        if (null == user) {
-            //token非法或已过期
-            return null;
-        }
+    /**
+     * 查询推荐用户列表
+     * @param queryParam
+     * @return
+     */
+    public PageResult queryRecommendation(RecommendUserQueryParam queryParam) {
+        //无需校验,直接获取
+        User user = UserThreadLocal.get();
 
         PageResult pageResult = new PageResult();
         pageResult.setPage(queryParam.getPage());

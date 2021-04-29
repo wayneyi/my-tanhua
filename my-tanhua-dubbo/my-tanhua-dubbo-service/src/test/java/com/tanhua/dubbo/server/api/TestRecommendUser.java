@@ -17,11 +17,20 @@ public class TestRecommendUser {
     @Autowired
     private MongoTemplate mongoTemplate;
 
+    @Autowired
+    private RecommendUserApi recommendUserApi;
+
     @Test
     public void test1(){
         Query query = Query.query(Criteria.where("toUserId").is(1))
                 .with(Sort.by(Sort.Order.desc("score"))).limit(1);
         RecommendUser one = mongoTemplate.findOne(query, RecommendUser.class);
         System.out.println(one);
+    }
+
+    @Test
+    public void test2(){
+        RecommendUser recommendUser = recommendUserApi.queryWithMaxScore(1L);
+        System.out.println(recommendUser);
     }
 }
