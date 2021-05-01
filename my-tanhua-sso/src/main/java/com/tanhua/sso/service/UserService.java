@@ -1,8 +1,10 @@
 package com.tanhua.sso.service;
 
+import com.alibaba.dubbo.config.annotation.Reference;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.tanhua.common.mapper.UserMapper;
 import com.tanhua.common.pojo.User;
+import com.tanhua.dubbo.server.api.HuanXinApi;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -23,6 +25,9 @@ import java.util.Map;
 @Service
 @Slf4j
 public class UserService {
+    @Reference(version = "1.0.0")
+    private HuanXinApi huanXinApi;
+
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
 
@@ -77,7 +82,14 @@ public class UserService {
             user.setPassword(DigestUtils.md5Hex("123456"));
             //注册新用户
             userMapper.insert(user);
+            Long id = user.getId();
             isNew = true;
+
+            //将该用户注册到环信平台
+            Boolean register = huanXinApi.register(id);
+            if(!register){
+                log.error("注册环信失败!"+user.getId());
+            }
         }
 
         //生成token
