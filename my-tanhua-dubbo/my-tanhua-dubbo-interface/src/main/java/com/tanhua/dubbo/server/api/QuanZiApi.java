@@ -75,4 +75,14 @@ public interface QuanZiApi {
      * @return
      */
     Boolean queryUserIsLike(Long userId, String publishId);
+
+    /**
+     * 查询相册表
+     *
+     * @param userId
+     * @param page
+     * @param pageSize
+     * @return
+     */
+    PageInfo<Publish> queryAlbumList(Long userId, Integer page, Integer pageSize);
 }

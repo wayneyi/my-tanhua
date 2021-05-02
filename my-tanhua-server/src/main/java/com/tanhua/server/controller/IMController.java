@@ -3,6 +3,7 @@
 package com.tanhua.server.controller;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.tanhua.common.utils.NoAuthorization;
 import com.tanhua.server.service.IMService;
 import com.tanhua.server.vo.PageResult;
 import com.tanhua.server.vo.UserInfoVo;
@@ -75,6 +76,26 @@ public class IMController {
                                                         @RequestParam(value = "keyword", required = false) String keyword) {
         PageResult pageResult = this.imService.queryContactsList(page, pageSize, keyword);
         return ResponseEntity.ok(pageResult);
+    }
+
+    /**
+     * 查询公告列表
+     *
+     * @param page
+     * @param pageSize
+     * @return
+     */
+    @GetMapping("announcements")
+    @NoAuthorization  //优化，无需进行token校验
+    public ResponseEntity<PageResult> queryMessageAnnouncementList(@RequestParam(value = "page", defaultValue = "1") Integer page,
+                                                                   @RequestParam(value = "pagesize", defaultValue = "10") Integer pageSize) {
+        try {
+            PageResult pageResult = this.imService.queryMessageAnnouncementList(page, pageSize);
+            return ResponseEntity.ok(pageResult);
+        } catch (Exception e) {
+            log.error("查询公告列表失败~ ", e);
+        }
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
 
 }

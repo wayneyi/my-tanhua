@@ -4,10 +4,13 @@ package com.tanhua.server.service;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.dubbo.config.annotation.Reference;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.tanhua.common.pojo.Announcement;
 import com.tanhua.common.pojo.User;
 import com.tanhua.common.pojo.UserInfo;
 import com.tanhua.common.utils.UserThreadLocal;
@@ -16,6 +19,7 @@ import com.tanhua.dubbo.server.api.UsersApi;
 import com.tanhua.dubbo.server.pojo.HuanXinUser;
 import com.tanhua.dubbo.server.pojo.Users;
 import com.tanhua.dubbo.server.vo.PageInfo;
+import com.tanhua.server.vo.AnnouncementVo;
 import com.tanhua.server.vo.PageResult;
 import com.tanhua.server.vo.UserInfoVo;
 import com.tanhua.server.vo.UsersVo;
@@ -31,11 +35,14 @@ public class IMService {
     @Reference(version = "1.0.0")
     private HuanXinApi huanXinApi;
 
+    @Reference(version = "1.0.0")
+    private UsersApi usersApi;
+
     @Autowired
     private UserInfoService userInfoService;
 
-    @Reference(version = "1.0.0")
-    private UsersApi usersApi;
+    @Autowired
+    private AnnouncementService announcementService;
 
     public UserInfoVo queryUserInfoByUserName(String userName) {
         //查询环信账户
@@ -123,6 +130,29 @@ public class IMService {
         }
 
         pageResult.setItems(contactsList);
+        return pageResult;
+    }
+
+    public PageResult queryMessageAnnouncementList(Integer page, Integer pageSize) {
+        IPage<Announcement> announcementPage = this.announcementService.queryList(page, pageSize);
+
+        List<AnnouncementVo> announcementVoList = new ArrayList<>();
+
+        for (Announcement record : announcementPage.getRecords()) {
+            AnnouncementVo announcementVo = new AnnouncementVo();
+            announcementVo.setId(record.getId().toString());
+            announcementVo.setTitle(record.getTitle());
+            announcementVo.setDescription(record.getDescription());
+            announcementVo.setCreateDate(DateUtil.format(record.getCreated(), "yyyy-MM-dd HH:mm"));
+
+            announcementVoList.add(announcementVo);
+        }
+
+        PageResult pageResult = new PageResult();
+        pageResult.setPage(page);
+        pageResult.setPagesize(pageSize);
+        pageResult.setItems(announcementVoList);
+
         return pageResult;
     }
 }

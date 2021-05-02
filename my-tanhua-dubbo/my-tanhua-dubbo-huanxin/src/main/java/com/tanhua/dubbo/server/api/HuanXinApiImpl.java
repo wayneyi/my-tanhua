@@ -7,16 +7,19 @@ import cn.hutool.json.JSONUtil;
 import com.alibaba.dubbo.config.annotation.Service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.tanhua.dubbo.server.config.HuanXinConfig;
+import com.tanhua.dubbo.server.enums.HuanXinMessageType;
 import com.tanhua.dubbo.server.mapper.HuanXinUserMapper;
 import com.tanhua.dubbo.server.pojo.HuanXinUser;
 import com.tanhua.dubbo.server.service.RequestService;
 import com.tanhua.dubbo.server.service.TokenService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Arrays;
 import java.util.Date;
 
 @Service(version = "1.0.0")
+@Slf4j
 public class HuanXinApiImpl implements HuanXinApi {
     @Autowired
     private TokenService tokenService;
@@ -48,7 +51,7 @@ public class HuanXinApiImpl implements HuanXinApi {
         HttpResponse response = requestService.execute(targetUrl,
                 JSONUtil.toJsonStr(Arrays.asList(huanXinUser)),
                 Method.POST);
-        if(response.isOk()){
+        if (response.isOk()) {
             //将环信账号信息保存到数据库
             huanXinUser.setUserId(userId);
             huanXinUser.setCreated(new Date());
@@ -63,7 +66,7 @@ public class HuanXinApiImpl implements HuanXinApi {
     @Override
     public HuanXinUser queryHuanXinUser(Long userId) {
         QueryWrapper<HuanXinUser> wrapper = new QueryWrapper<>();
-        wrapper.eq("user_id",userId);
+        wrapper.eq("user_id", userId);
 
         return huanXinUserMapper.selectOne(wrapper);
     }
@@ -71,7 +74,7 @@ public class HuanXinApiImpl implements HuanXinApi {
     @Override
     public HuanXinUser queryUserByUserName(String userName) {
         QueryWrapper<HuanXinUser> wrapper = new QueryWrapper<>();
-        wrapper.eq("username",userName);
+        wrapper.eq("username", userName);
 
         return huanXinUserMapper.selectOne(wrapper);
     }
@@ -108,6 +111,30 @@ public class HuanXinApiImpl implements HuanXinApi {
         }
 
         // 添加失败
+        return false;
+    }
+
+    @Override
+    public Boolean sendMsgFromAdmin(String targetUserName, HuanXinMessageType huanXinMessageType, String msg) {
+        String targetUrl = this.huanXinConfig.getUrl()
+                + this.huanXinConfig.getOrgName() + "/"
+                + this.huanXinConfig.getAppName() + "/messages";
+
+        try {
+            //{"target_type": "users","target": ["user2","user3"],"msg": {"type": "txt","msg": "testmessage"},"from": "user1"}
+            String body = JSONUtil.createObj()
+                    .set("target_type", "users")
+                    .set("target", JSONUtil.createArray().set(targetUserName))
+                    .set("msg", JSONUtil.createObj()
+                            .set("type", huanXinMessageType.getType())
+                            .set("msg", msg)).toString();
+            //表示消息发送者;无此字段Server会默认设置为“from”:“admin”，有from字段但值为空串(“”)时请求失败
+//                .set("from", "")
+
+            return this.requestService.execute(targetUrl, body, Method.POST).isOk();
+        } catch (Exception e) {
+            log.error("发送消息失败~ targetUserName = " + targetUserName+", type = " + huanXinMessageType.getType()+", msg = " + msg, e);
+        }
         return false;
     }
 }

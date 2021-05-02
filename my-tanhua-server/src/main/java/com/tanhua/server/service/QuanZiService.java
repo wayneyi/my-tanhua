@@ -2,6 +2,7 @@ package com.tanhua.server.service;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.dubbo.config.annotation.Reference;
 import com.tanhua.common.pojo.User;
 import com.tanhua.common.pojo.UserInfo;
@@ -10,16 +11,20 @@ import com.tanhua.common.utils.RelativeDateFormat;
 import com.tanhua.common.utils.UserThreadLocal;
 import com.tanhua.common.vo.PicUploadResult;
 import com.tanhua.dubbo.server.api.QuanZiApi;
+import com.tanhua.dubbo.server.api.VisitorsApi;
 import com.tanhua.dubbo.server.pojo.Publish;
+import com.tanhua.dubbo.server.pojo.Visitors;
 import com.tanhua.dubbo.server.vo.PageInfo;
 import com.tanhua.server.vo.PageResult;
 import com.tanhua.server.vo.QuanZiVo;
+import com.tanhua.server.vo.VisitorsVo;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -27,6 +32,9 @@ import java.util.List;
 public class QuanZiService {
     @Reference(version = "1.0.0")
     private QuanZiApi quanZiApi;
+
+    @Reference(version = "1.0.0")
+    private VisitorsApi visitorsApi;
 
     @Autowired
     private UserService userService;
@@ -179,5 +187,56 @@ public class QuanZiService {
 
         pageResult.setItems(fillQuanZiVo(records));
         return pageResult;
+    }
+
+    public PageResult queryAlbumList(Long userId, Integer page, Integer pageSize) {
+        PageResult pageResult = new PageResult();
+        pageResult.setPage(page);
+        pageResult.setPagesize(pageSize);
+
+        //查询数据
+        PageInfo<Publish> pageInfo = quanZiApi.queryAlbumList(userId, page, pageSize);
+        if(CollUtil.isEmpty(pageInfo.getRecords())){
+            return pageResult;
+        }
+
+        //填充数据
+        pageResult.setItems(fillQuanZiVo(pageInfo.getRecords()));
+
+        return pageResult;
+    }
+
+    public List<VisitorsVo> queryVisitorsList() {
+        User user = UserThreadLocal.get();
+        List<Visitors> visitorsList = this.visitorsApi.queryMyVisitor(user.getId());
+        if (CollUtil.isEmpty(visitorsList)) {
+            return Collections.emptyList();
+        }
+
+        List<Object> userIds = CollUtil.getFieldValues(visitorsList, "visitorUserId");
+        List<UserInfo> userInfoList = this.userInfoService.queryUserInfoByUserIdList(userIds);
+
+        List<VisitorsVo> visitorsVoList = new ArrayList<>();
+
+        for (Visitors visitor : visitorsList) {
+            for (UserInfo userInfo : userInfoList) {
+                if (ObjectUtil.equals(visitor.getVisitorUserId(), userInfo.getUserId())) {
+
+                    VisitorsVo visitorsVo = new VisitorsVo();
+                    visitorsVo.setAge(userInfo.getAge());
+                    visitorsVo.setAvatar(userInfo.getLogo());
+                    visitorsVo.setGender(userInfo.getSex().name().toLowerCase());
+                    visitorsVo.setId(userInfo.getUserId());
+                    visitorsVo.setNickname(userInfo.getNickName());
+                    visitorsVo.setTags(StringUtils.split(userInfo.getTags(), ','));
+                    visitorsVo.setFateValue(visitor.getScore().intValue());
+
+                    visitorsVoList.add(visitorsVo);
+                    break;
+                }
+            }
+        }
+
+        return visitorsVoList;
     }
 }

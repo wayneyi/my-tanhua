@@ -18,6 +18,7 @@ import com.tanhua.dubbo.server.vo.PageInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -341,5 +342,30 @@ public class QuanZiApiImpl implements QuanZiApi {
                 .and("commentType").is(commentType.getType())
         );
         return this.mongoTemplate.count(query, Comment.class);
+    }
+
+    @Override
+    public PageInfo<Publish> queryAlbumList(Long userId, Integer page, Integer pageSize) {
+        PageInfo<Publish> pageInfo = new PageInfo<>();
+        pageInfo.setPageNum(page);
+        pageInfo.setPageSize(pageSize);
+
+        PageRequest pageRequest = PageRequest.of(page - 1,pageSize,
+                Sort.by(Sort.Order.desc("created")));
+        Query query = new Query().with(pageRequest);
+        //查询自己的相册表
+        List<Album> albumList = mongoTemplate.find(query, Album.class, "quanzi_album_" + userId);
+
+        if(CollUtil.isEmpty(albumList)){
+            return pageInfo;
+        }
+
+        List<Object> publishIdList = CollUtil.getFieldValues(albumList, "publishId");
+        Query queryPublish = Query.query(Criteria.where("id").in(publishIdList))
+                .with(Sort.by(Sort.Order.desc("created")));
+        List<Publish> publishListList = mongoTemplate.find(queryPublish, Publish.class);
+        pageInfo.setRecords(publishListList);
+
+        return pageInfo;
     }
 }
