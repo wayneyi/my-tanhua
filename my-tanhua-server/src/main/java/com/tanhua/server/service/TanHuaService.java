@@ -1,22 +1,37 @@
 package com.tanhua.server.service;
 
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.dubbo.config.annotation.Reference;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.tanhua.common.enums.SexEnum;
 import com.tanhua.common.pojo.Question;
 import com.tanhua.common.pojo.User;
 import com.tanhua.common.pojo.UserInfo;
 import com.tanhua.common.utils.UserThreadLocal;
 import com.tanhua.dubbo.server.api.HuanXinApi;
+import com.tanhua.dubbo.server.api.UserLikeApi;
+import com.tanhua.dubbo.server.api.UserLocationApi;
 import com.tanhua.dubbo.server.api.VisitorsApi;
 import com.tanhua.dubbo.server.enums.HuanXinMessageType;
+import com.tanhua.dubbo.server.pojo.RecommendUser;
+import com.tanhua.dubbo.server.pojo.UserLike;
+import com.tanhua.dubbo.server.vo.PageInfo;
+import com.tanhua.dubbo.server.vo.UserLocationVo;
+import com.tanhua.server.vo.NearUserVo;
 import com.tanhua.server.vo.TodayBest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -26,6 +41,18 @@ public class TanHuaService {
 
     @Reference(version = "1.0.0")
     private VisitorsApi visitorsApi;
+
+    @Reference(version = "1.0.0")
+    private UserLocationApi userLocationApi;
+
+    @Reference(version = "1.0.0")
+    private UserLikeApi userLikeApi;
+
+    @Autowired
+    private IMService imService;
+
+    @Value("${tanhua.default.recommend.users}")
+    private String defaultRecommendUsers;
 
     @Autowired
     private UserInfoService userInfoService;
@@ -83,5 +110,128 @@ public class TanHuaService {
         //发送环信消息
         return this.huanXinApi.sendMsgFromAdmin("HX_" + userId,
                 HuanXinMessageType.TXT, JSONUtil.toJsonStr(msg));
+    }
+
+    public List<NearUserVo> queryNearUser(String gender, String distance) {
+        //查询当前用户位置
+        User user = UserThreadLocal.get();
+        UserLocationVo userLocationVo = userLocationApi.queryByUserId(user.getId());
+
+        if(ObjectUtil.isEmpty(userLocationVo)){
+            return ListUtil.empty();
+        }
+
+        PageInfo<UserLocationVo> pageInfo = userLocationApi.queryUserFromLocation(userLocationVo.getLongitude(),
+                userLocationVo.getLatitude(),
+                Convert.toDouble(distance),
+                1, 50
+        );
+
+        List<UserLocationVo> records = pageInfo.getRecords();
+
+        if(CollUtil.isEmpty(records)){
+            return ListUtil.empty();
+        }
+
+        //构造筛选条件
+        List<Object> userIdList = CollUtil.getFieldValues(records, "userId");
+        QueryWrapper<UserInfo> queryWrapper = new QueryWrapper<>();
+        queryWrapper.in("user_id",userIdList);
+        if(StrUtil.equalsIgnoreCase(gender,"man")){
+            queryWrapper.eq("sex", SexEnum.MAN);
+        }else if(StrUtil.equalsIgnoreCase(gender,"woman")){
+            queryWrapper.eq("sex", SexEnum.WOMAN);
+        }
+
+        List<UserInfo> userInfoList = userInfoService.queryUserInfoList(queryWrapper);
+
+        List<NearUserVo> result = new ArrayList<>();
+        for (UserLocationVo locationVo : records) {
+            //排除自己
+            if(ObjectUtil.equal(locationVo.getUserId(),user.getId())){
+                continue;
+            }
+
+            for (UserInfo userInfo : userInfoList) {
+                if(ObjectUtil.equal(locationVo.getUserId(),userInfo.getUserId())){
+                    NearUserVo nearUserVo = new NearUserVo();
+                    nearUserVo.setUserId(userInfo.getUserId());
+                    nearUserVo.setAvatar(userInfo.getLogo());
+                    nearUserVo.setNickname(userInfo.getNickName());
+                    result.add(nearUserVo);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    public List<TodayBest> queryCardsList() {
+        User user = UserThreadLocal.get();
+        int count = 50;
+
+        //查询到的50条数据,并不是用来直接展示,需要从50条数据中随机返回一些数据
+        List<RecommendUser> recommendUserList = recommendUserService.queryCardList(user.getId(), count);
+        if(CollUtil.isEmpty(recommendUserList)){
+            recommendUserList = new ArrayList<>();
+            //默认推荐列表
+            List<String> list = StrUtil.split(defaultRecommendUsers, ',');
+            for (String userId : list) {
+                RecommendUser recommendUser = new RecommendUser();
+
+                recommendUser.setToUserId(user.getId());
+                recommendUser.setUserId(Convert.toLong(userId));
+                recommendUserList.add(recommendUser);
+            }
+        }
+
+        //计算展现的数量,默认展现10个
+        int showCount = Math.min(10,recommendUserList.size());
+        List<RecommendUser> result = new ArrayList<>();
+        for (int i = 0; i < showCount; i++) {
+            //TODO 可能重复
+            int index = RandomUtil.randomInt(0, recommendUserList.size());
+            RecommendUser recommendUser = recommendUserList.get(index);
+            result.add(recommendUser);
+        }
+
+        List<Object> userIdList = CollUtil.getFieldValues(result, "userId");
+        List<UserInfo> userInfoList = userInfoService.queryUserInfoByUserIdList(userIdList);
+
+        List<TodayBest> todayBests = new ArrayList<>();
+        for (UserInfo userInfo : userInfoList) {
+            TodayBest todayBest = new TodayBest();
+            todayBest.setId(userInfo.getUserId());
+            todayBest.setAge(userInfo.getAge());
+            todayBest.setAvatar(userInfo.getLogo());
+            todayBest.setGender(userInfo.getSex().name().toLowerCase());
+            todayBest.setNickname(userInfo.getNickName());
+            todayBest.setTags(Convert.toStrArray(StrUtil.split(userInfo.getTags(), ',')));
+            todayBest.setFateValue(0L);
+
+            todayBests.add(todayBest);
+        }
+        return todayBests;
+    }
+
+    //com.tanhua.server.service.TanHuaService
+
+    public Boolean likeUser(Long likeUserId) {
+        User user = UserThreadLocal.get();
+        Boolean result = this.userLikeApi.likeUser(user.getId(), likeUserId);
+        if (!result) {
+            return false;
+        }
+
+        if (this.userLikeApi.isMutualLike(user.getId(), likeUserId)) {
+            //相互喜欢成为好友
+            this.imService.contactUser(likeUserId);
+        }
+        return true;
+    }
+
+    public Boolean notLikeUser(Long likeUserId) {
+        User user = UserThreadLocal.get();
+        return this.userLikeApi.notLikeUser(user.getId(), likeUserId);
     }
 }

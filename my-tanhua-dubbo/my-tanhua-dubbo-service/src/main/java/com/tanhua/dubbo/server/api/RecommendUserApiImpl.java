@@ -1,5 +1,6 @@
 package com.tanhua.dubbo.server.api;
 
+import cn.hutool.core.collection.CollUtil;
 import com.alibaba.dubbo.config.annotation.Service;
 import com.tanhua.dubbo.server.pojo.RecommendUser;
 import com.tanhua.dubbo.server.vo.PageInfo;
@@ -10,12 +11,16 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service(version = "1.0.0")
 public class RecommendUserApiImpl implements RecommendUserApi {
     @Autowired
     private MongoTemplate mongoTemplate;
+
+    @Autowired
+    private UserLikeApi userLikeApi;
 
     @Override
     public RecommendUser queryWithMaxScore(Long userId) {
@@ -47,5 +52,28 @@ public class RecommendUserApiImpl implements RecommendUserApi {
             return recommendUser.getScore();
         }
         return null;
+    }
+
+    @Override
+    public List<RecommendUser> queryCardList(Long userId, Integer count) {
+        //设置分页以及排序,按照得分倒序排序
+        PageRequest pageRequest = PageRequest.of(0,count,Sort.by(Sort.Order.desc("score")));
+        //排除已喜欢或不喜欢的用户
+        List<Long> userIds = new ArrayList<>();
+        //查询喜欢列表
+        userIds.addAll(userLikeApi.queryLikeList(userId));
+        //查询不喜欢列表
+        userIds.addAll(userLikeApi.queryNotLikeList(userId));
+
+        //构造查询条件
+        Criteria criteria = Criteria.where("toUserId").is(userId);
+        if(CollUtil.isNotEmpty(userIds)){
+            //假如到查询条件中,排除这些用户
+            criteria.andOperator(Criteria.where("userId").nin(userIds));
+        }
+
+        Query query = Query.query(criteria).with(pageRequest);
+        List<RecommendUser> recommendUserList = mongoTemplate.find(query, RecommendUser.class);
+        return recommendUserList;
     }
 }

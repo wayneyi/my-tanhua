@@ -8,6 +8,8 @@ import com.tanhua.dubbo.server.vo.PageInfo;
 import com.tanhua.server.vo.TodayBest;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * 负责与dubbo服务进行交互
  */
@@ -32,6 +34,16 @@ public class RecommendUserService {
 
     public PageInfo<RecommendUser> queryRecommendUserList(Long userId, Integer page, Integer pageSize) {
         return recommendUserApi.queryPageInfo(userId,page,pageSize);
+    }
+
+    /**
+     * 查询探花卡片列表
+     * @param userId
+     * @param count
+     * @return
+     */
+    public List<RecommendUser> queryCardList(Long userId, Integer count) {
+        return recommendUserApi.queryCardList(userId,count);
     }
 
     public Double queryScore(Long userId,Long toUserId){

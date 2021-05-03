@@ -3,6 +3,8 @@ package com.tanhua.dubbo.server.api;
 import com.tanhua.dubbo.server.vo.PageInfo;
 import com.tanhua.dubbo.server.pojo.RecommendUser;
 
+import java.util.List;
+
 public interface RecommendUserApi {
 
     /**
@@ -32,4 +34,13 @@ public interface RecommendUserApi {
      * @return
      */
     Double queryScore(Long userId, Long toUserId);
+
+    /**
+     * 查询探花列表，查询时需要排除不喜欢列表用户
+     *
+     * @param userId
+     * @param count
+     * @return
+     */
+    List<RecommendUser> queryCardList(Long userId, Integer count);
 }
