@@ -33,4 +33,10 @@ public class TestRecommendUser {
         RecommendUser recommendUser = recommendUserApi.queryWithMaxScore(1L);
         System.out.println(recommendUser);
     }
+
+    @Test
+    public void testQueryCardList(){
+        this.recommendUserApi.queryCardList(2L, 20)
+                .forEach(recommendUser -> System.out.println(recommendUser));
+    }
 }

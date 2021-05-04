@@ -155,4 +155,14 @@ public class IMService {
 
         return pageResult;
     }
+
+    public void removeUser(Long userId) {
+        //删除好友关系
+        User user = UserThreadLocal.get();
+        Boolean result = usersApi.removeUsers(user.getId(), userId);
+        if(result){
+            //将环信平台的好友关系解除
+            huanXinApi.removeUserFriend(user.getId(),userId);
+        }
+    }
 }

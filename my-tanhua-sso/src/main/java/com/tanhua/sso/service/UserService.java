@@ -1,5 +1,6 @@
 package com.tanhua.sso.service;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.dubbo.config.annotation.Reference;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.tanhua.common.mapper.UserMapper;
@@ -95,6 +96,7 @@ public class UserService {
         //生成token
         Map<String, Object> claims = new HashMap<String, Object>();
         claims.put("id", user.getId());
+        claims.put("mobile",user.getMobile());
 
         // 生成token
         String token = Jwts.builder()
@@ -128,6 +130,7 @@ public class UserService {
 
             User user = new User();
             user.setId(Long.valueOf(body.get("id").toString()));
+            user.setMobile(body.get("mobile").toString());
 
             //需要返回user对象中的mobile,需要查询数据库获取mobile数据
             //如果每次都查询数据库,会影响性能,需要对mobile数据进行缓存
@@ -140,5 +143,22 @@ public class UserService {
             log.error("Token不合法 token=" + token, e);
         }
         return null;
+    }
+
+    public Boolean updatePhone(Long userId, String newPhone) {
+        //先查询新手机号是否已经注册,如果已经注册,就不能修改
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("mobile", newPhone);
+        User user = userMapper.selectOne(queryWrapper);
+        if(ObjectUtil.isNotEmpty(user)){
+            //新手机号已经被注册
+            return false;
+        }
+
+        user = new User();
+        user.setId(userId);
+        user.setMobile(newPhone);
+
+        return userMapper.updateById(user) > 0;
     }
 }
