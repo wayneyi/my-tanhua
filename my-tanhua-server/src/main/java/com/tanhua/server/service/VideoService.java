@@ -35,7 +35,6 @@ public class VideoService {
     @Autowired
     private PicUploadService picUploadService;
 
-
     @Autowired
     protected FastFileStorageClient storageClient;
 
